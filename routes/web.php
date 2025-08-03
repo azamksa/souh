@@ -1,17 +1,20 @@
 <?php
 
-use App\Http\Controllers\TripController;
-use App\Http\Controllers\RequestController;
-use App\Http\Controllers\Admin\TripController as AdminTripController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [TripController::class, 'index'])->name('trips.index');
-Route::get('/trips/{trip}', [TripController::class, 'show'])->name('trips.show');
-
-Route::middleware(['auth'])->group(function () {
-    Route::resource('requests', RequestController::class)->only(['create', 'store', 'index']);
+Route::get('/', function () {
+    return view('welcome');
 });
 
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::resource('admin/trips', AdminTripController::class);
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+require __DIR__.'/auth.php';
