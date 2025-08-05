@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +13,25 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // إنشاء مستخدم عادي
+        User::create([
+            'name' => 'أحمد محمد',
+            'email' => 'user@sawah.com',
+            'password' => Hash::make('password'),
+            'is_admin' => false,
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // إنشاء مستخدم admin
+        User::create([
+            'name' => 'المدير العام',
+            'email' => 'admin@sawah.com',
+            'password' => Hash::make('password'),
+            'is_admin' => true,
+        ]);
+
+        // تشغيل seeder الرحلات
+        $this->call([
+            TripSeeder::class,
         ]);
     }
 }

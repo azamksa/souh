@@ -49,6 +49,7 @@
 </head>
 <body class="bg-gray-50">
     <!-- Alert Banner for Guest Users -->
+    @guest
     <div id="guest-alert" class="bg-gradient-to-r from-orange-500 to-red-500 text-white text-center py-3 px-4 relative">
         <div class="flex items-center justify-center space-x-2 space-x-reverse">
             <i class="fas fa-info-circle animate-bounce"></i>
@@ -59,6 +60,7 @@
             <i class="fas fa-times"></i>
         </button>
     </div>
+    @endguest
 
     <!-- Navigation -->
     <nav class="bg-white shadow-lg sticky top-0 z-50">
@@ -74,20 +76,37 @@
                 
                 <div class="hidden md:flex items-center space-x-6 space-x-reverse">
                     <a href="#home" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">الرئيسية</a>
-                    <a href="#trips" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">الرحلات</a>
-                    <a href="#about" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">من نحن</a>
-                    <a href="#contact" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">اتصل بنا</a>
+                    <a href="{{ route('trips.index') }}" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">الرحلات</a>
+                    @auth
+                        <a href="{{ route('requests.index') }}" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">طلباتي</a>
+                        <a href="{{ route('dashboard') }}" class="text-gray-700 hover:text-purple-600 transition-colors font-medium">لوحة التحكم</a>
+                    @endauth
                 </div>
                 
                 <div class="flex items-center space-x-4 space-x-reverse">
-                    <a href="{{ route('login') }}" class="bg-purple-600 text-white px-6 py-2 rounded-full hover:bg-purple-700 transition-colors font-medium">
-                        <i class="fas fa-sign-in-alt ml-2"></i>
-                        تسجيل الدخول
-                    </a>
-                    <a href="{{ route('register') }}" class="border border-purple-600 text-purple-600 px-6 py-2 rounded-full hover:bg-purple-50 transition-colors font-medium">
-                        <i class="fas fa-user-plus ml-2"></i>
-                        إنشاء حساب
-                    </a>
+                    @guest
+                        <a href="{{ route('login') }}" class="bg-purple-600 text-white px-6 py-2 rounded-full hover:bg-purple-700 transition-colors font-medium">
+                            <i class="fas fa-sign-in-alt ml-2"></i>
+                            تسجيل الدخول
+                        </a>
+                        <a href="{{ route('register') }}" class="border border-purple-600 text-purple-600 px-6 py-2 rounded-full hover:bg-purple-50 transition-colors font-medium">
+                            <i class="fas fa-user-plus ml-2"></i>
+                            إنشاء حساب
+                        </a>
+                    @else
+                        <div class="relative">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <span class="text-gray-700">مرحباً، {{ auth()->user()->name }}</span>
+                                <form method="POST" action="{{ route('logout') }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="text-red-600 hover:text-red-700 transition-colors">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        تسجيل الخروج
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @endguest
                 </div>
             </div>
         </div>
@@ -107,14 +126,10 @@
             </div>
             
             <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 md:space-x-reverse mb-12">
-                <button class="bg-yellow-400 text-purple-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-300 transition-all transform hover:scale-105 shadow-xl">
+                <a href="{{ route('trips.index') }}" class="bg-yellow-400 text-purple-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-300 transition-all transform hover:scale-105 shadow-xl">
                     <i class="fas fa-search ml-2"></i>
                     استكشف الرحلات
-                </button>
-                <button class="glass-effect text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:bg-opacity-20 transition-all">
-                    <i class="fas fa-play-circle ml-2"></i>
-                    شاهد الفيديو
-                </button>
+                </a>
             </div>
 
             <!-- Stats -->
@@ -132,7 +147,7 @@
                     <div class="text-sm md:text-base">دولة</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl md:text-4xl font-bold text-yellow-300 mb-2">4.9★</div>
+                    <div class="text-3xl md:text-4xl font-bold text-yellow-300 mb-2">4.7★</div>
                     <div class="text-sm md:text-base">تقييم العملاء</div>
                 </div>
             </div>
@@ -162,10 +177,11 @@
                 <!-- Trip Card 1 -->
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
                     <div class="relative">
-                        <div class="h-64 bg-gradient-to-br from-blue-400 to-purple-500"></div>
+                        <img src="{{ asset('https://www.terhalak.com/wp-content/uploads/2020/08/honeymoon-in-the-Maldives.jpg') }}" alt="Trip 1" class="w-full h-64 object-cover">
+                        <!-- <div class="h-64 bg-gradient-to-br from-blue-400 to-purple-500"></div>
                         <div class="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
                             <i class="fas fa-camera text-white text-4xl"></i>
-                        </div>
+                        </div> -->
                         <div class="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                             مميزة
                         </div>
@@ -181,9 +197,9 @@
                         <p class="text-gray-600 mb-4">استمتع بأجمل الشواطئ والمياه الفيروزية في جنة على الأرض</p>
                         <div class="flex items-center justify-between">
                             <div class="text-2xl font-bold text-purple-600">2,500 ريال</div>
-                            <button class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
+                            <a href="{{ route('trips.index') }}" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
                                 عرض التفاصيل
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -191,10 +207,11 @@
                 <!-- Trip Card 2 -->
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
                     <div class="relative">
-                        <div class="h-64 bg-gradient-to-br from-green-400 to-blue-500"></div>
+                        <img src="{{ asset('https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=800') }}" alt="Trip 1" class="w-full h-64 object-cover">
+                        <!-- <div class="h-64 bg-gradient-to-br from-green-400 to-blue-500"></div>
                         <div class="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
                             <i class="fas fa-mountain text-white text-4xl"></i>
-                        </div>
+                        </div> -->
                         <div class="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                             جديدة
                         </div>
@@ -210,9 +227,9 @@
                         <p class="text-gray-600 mb-4">تسلق أعلى القمم واستمتع بالطبيعة الخلابة والهواء النقي</p>
                         <div class="flex items-center justify-between">
                             <div class="text-2xl font-bold text-purple-600">3,200 ريال</div>
-                            <button class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
+                            <a href="{{ route('trips.index') }}" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
                                 عرض التفاصيل
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -220,10 +237,11 @@
                 <!-- Trip Card 3 -->
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover">
                     <div class="relative">
-                        <div class="h-64 bg-gradient-to-br from-orange-400 to-red-500"></div>
+                        <img src="{{ asset('https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800') }}" alt="Trip 1" class="w-full h-64 object-cover">
+                        <!-- <div class="h-64 bg-gradient-to-br from-orange-400 to-red-500"></div>
                         <div class="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
                             <i class="fas fa-umbrella-beach text-white text-4xl"></i>
-                        </div>
+                        </div> -->
                         <div class="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                             الأكثر طلباً
                         </div>
@@ -239,19 +257,19 @@
                         <p class="text-gray-600 mb-4">شواطئ ساحرة، ثقافة غنية، ومنتجعات فاخرة في جزيرة الآلهة</p>
                         <div class="flex items-center justify-between">
                             <div class="text-2xl font-bold text-purple-600">1,800 ريال</div>
-                            <button class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
+                            <a href="{{ route('trips.index') }}" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition-colors">
                                 عرض التفاصيل
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="text-center mt-12">
-                <button class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105">
+                <a href="{{ route('trips.index') }}" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105">
                     <i class="fas fa-eye ml-2"></i>
                     عرض جميع الرحلات
-                </button>
+                </a>
             </div>
         </div>
     </section>
@@ -306,20 +324,20 @@
             <h2 class="text-4xl md:text-5xl font-bold mb-6">جاهز للمغامرة؟</h2>
             <p class="text-xl mb-8 max-w-2xl mx-auto">انضم إلى آلاف المسافرين الذين اختاروا سواح لرحلاتهم المميزة</p>
             <div class="space-y-4 md:space-y-0 md:space-x-4 md:space-x-reverse md:flex md:justify-center">
-                <button class="bg-yellow-400 text-purple-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-300 transition-all transform hover:scale-105 shadow-xl pulse-slow block md:inline-block">
+                <a href="{{ route('trips.index') }}" class="bg-yellow-400 text-purple-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-300 transition-all transform hover:scale-105 shadow-xl pulse-slow block md:inline-block">
                     <i class="fas fa-rocket ml-2"></i>
                     ابدأ رحلتك الآن
-                </button>
-                <button class="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-purple-600 transition-all block md:inline-block">
+                </a>
+                <a href="#contact" class="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-purple-600 transition-all block md:inline-block">
                     <i class="fas fa-phone ml-2"></i>
                     اتصل بنا
-                </button>
+                </a>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12">
+    <footer id="contact" class="bg-gray-800 text-white py-12">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
@@ -344,7 +362,7 @@
                 <div>
                     <h3 class="text-lg font-bold mb-4">الخدمات</h3>
                     <ul class="space-y-2">
-                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">حجز الرحلات</a></li>
+                        <li><a href="{{ route('trips.index') }}" class="text-gray-400 hover:text-white transition-colors">حجز الرحلات</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">تقييم الأماكن</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">الاستشارات السياحية</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">التأمين السياحي</a></li>
@@ -354,7 +372,7 @@
                 <div>
                     <h3 class="text-lg font-bold mb-4">معلومات</h3>
                     <ul class="space-y-2">
-                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">من نحن</a></li>
+                        <li><a href="#about" class="text-gray-400 hover:text-white transition-colors">من نحن</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">الشروط والأحكام</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">سياسة الخصوصية</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">الأسئلة الشائعة</a></li>

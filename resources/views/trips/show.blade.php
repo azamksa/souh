@@ -1,11 +1,9 @@
-@extends('layouts.app')
-
-@section('content')
-<div>
-    <h2>{{ $trip->title }}</h2>
-    <p>{{ $trip->description }}</p>
-    <p>{{ $trip->destination }}</p>
-    <p>{{ $trip->price }} ر.س</p>
-    <a href="{{ route('requests.create', $trip) }}">طلب الرحلة</a>
-</div>
-@endsection
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $trip->title }} - سواح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-
