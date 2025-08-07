@@ -3,7 +3,9 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\RequestController;
+use App\Http\Controllers\RatingController;
 use App\Http\Controllers\Admin\TripController as AdminTripController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,11 +37,41 @@ Route::middleware('auth')->group(function () {
     Route::get('/requests', [RequestController::class, 'index'])->name('requests.index');
     Route::get('/requests/create/{trip}', [RequestController::class, 'create'])->name('requests.create');
     Route::post('/requests', [RequestController::class, 'store'])->name('requests.store');
+    
+    // نظام التقييمات
+    Route::post('/ratings', [RatingController::class, 'store'])->name('ratings.store');
+    Route::get('/ratings/{trip}', [RatingController::class, 'show'])->name('ratings.show');
 });
 
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // لوحة التحكم الرئيسية
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // إدارة الرحلات
     Route::resource('trips', AdminTripController::class);
+    
+    // إدارة الطلبات
+    Route::get('/requests', [AdminDashboardController::class, 'requests'])->name('requests.index');
+    Route::patch('/requests/{request}/status', [AdminDashboardController::class, 'updateRequestStatus'])->name('requests.updateStatus');
+    
+    // إدارة التقييمات
+    Route::get('/ratings', [AdminDashboardController::class, 'ratings'])->name('ratings.index');
+    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy'])->name('ratings.destroy');
+    
+    // إدارة المستخدمين
+    Route::get('/users', [AdminDashboardController::class, 'users'])->name('users.index');
+    Route::patch('/users/{user}/toggle-status', [AdminDashboardController::class, 'toggleUserStatus'])->name('users.toggleStatus');
+    
+    // تقارير وإحصائيات
+    Route::get('/reports', function() {
+        return view('admin.reports.index');
+    })->name('reports.index');
+    
+    // الإعدادات
+    Route::get('/settings', function() {
+        return view('admin.settings.index');
+    })->name('settings.index');
 });
 
 require __DIR__.'/auth.php';
