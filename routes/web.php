@@ -6,6 +6,7 @@ use App\Http\Controllers\RequestController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\Admin\TripController as AdminTripController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ReportsController as AdminReportsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -63,10 +64,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', [AdminDashboardController::class, 'users'])->name('users.index');
     Route::patch('/users/{user}/toggle-status', [AdminDashboardController::class, 'toggleUserStatus'])->name('users.toggleStatus');
     
-    // تقارير وإحصائيات
-    Route::get('/reports', function() {
-        return view('admin.reports.index');
-    })->name('reports.index');
+    // تقارير وإحصائيات - الراوت الجديد
+    Route::get('/reports', [AdminReportsController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [AdminReportsController::class, 'exportData'])->name('reports.export');
     
     // الإعدادات
     Route::get('/settings', function() {

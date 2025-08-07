@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Trip extends Model
 {
@@ -17,122 +18,156 @@ class Trip extends Model
         'start_date',
         'end_date',
         'image_url',
-        'is_featured',
         'is_active',
+        'is_featured',
         'average_rating',
         'total_ratings'
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'is_featured' => 'boolean',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'is_active' => 'boolean',
-        'average_rating' => 'decimal:2',
-        'total_ratings' => 'integer'
+        'is_featured' => 'boolean',
+        'price' => 'decimal:2',
+        'average_rating' => 'decimal:2'
     ];
 
-    /**
-     * علاقة مع الطلبات
-     */
+    // العلاقات
     public function requests()
     {
         return $this->hasMany(Request::class);
     }
 
-    /**
-     * علاقة مع التقييمات
-     */
     public function ratings()
     {
         return $this->hasMany(Rating::class);
     }
 
-    /**
-     * الحصول على أحدث التقييمات
-     */
-    public function latestRatings($limit = 5)
+    // الخصائص المحسوبة
+    public function getDurationAttribute()
     {
-        return $this->ratings()->with('user')->latest()->take($limit)->get();
+        return $this->start_date->diffInDays($this->end_date);
     }
 
-    /**
-     * الحصول على تقييم المستخدم الحالي
-     */
+    public function getFormattedPriceAttribute()
+    {
+        return number_format($this->price) . ' ريال';
+    }
+
+    // دوال التقييم
+    public function updateRatingStats()
+    {
+        $ratings = $this->ratings;
+        
+        if ($ratings->count() > 0) {
+            $this->average_rating = $ratings->avg('rating');
+            $this->total_ratings = $ratings->count();
+        } else {
+            $this->average_rating = 0;
+            $this->total_ratings = 0;
+        }
+        
+        $this->save();
+    }
+
     public function userRating($userId)
     {
         return $this->ratings()->where('user_id', $userId)->first();
     }
 
-    /**
-     * حساب توزيع النجوم
-     */
+    public function latestRatings($limit = 10)
+    {
+        return $this->ratings()
+            ->with('user')
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
     public function getRatingDistribution()
     {
         $distribution = [];
+        $total = $this->ratings->count();
+        
         for ($i = 1; $i <= 5; $i++) {
-            $count = $this->ratings()->where('rating', $i)->count();
-            $percentage = $this->total_ratings > 0 ? round(($count / $this->total_ratings) * 100, 1) : 0;
+            $count = $this->ratings->where('rating', $i)->count();
+            $percentage = $total > 0 ? round(($count / $total) * 100, 1) : 0;
+            
             $distribution[$i] = [
                 'count' => $count,
                 'percentage' => $percentage
             ];
         }
+        
         return $distribution;
     }
 
-    /**
-     * الحصول على النجوم كنص
-     */
-    public function getStarsAttribute()
-    {
-        $fullStars = floor($this->average_rating);
-        $hasHalfStar = $this->average_rating - $fullStars >= 0.5;
-        
-        return [
-            'full' => $fullStars,
-            'half' => $hasHalfStar ? 1 : 0,
-            'empty' => 5 - $fullStars - ($hasHalfStar ? 1 : 0)
-        ];
-    }
-
-    /**
-     * نطاق للرحلات النشطة فقط
-     */
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    /**
-     * نطاق للرحلات المميزة
-     */
     public function scopeFeatured($query)
     {
         return $query->where('is_featured', true);
     }
 
-    /**
-     * نطاق للرحلات الأعلى تقييماً
-     */
-    public function scopeTopRated($query)
+    public function scopeWithHighRating($query, $minRating = 4)
     {
-        return $query->where('total_ratings', '>', 0)->orderByDesc('average_rating');
+        return $query->where('average_rating', '>=', $minRating)
+                    ->where('total_ratings', '>=', 3);
     }
 
-    /**
-     * الحصول على مدة الرحلة بالأيام
-     */
-    public function getDurationAttribute()
+    // للبحث والفلترة
+    public function scopeByDestination($query, $destination)
     {
-        return $this->start_date->diffInDays($this->end_date) + 1;
+        return $query->where('destination', 'like', '%' . $destination . '%');
     }
 
-    /**
-     * الحصول على السعر مع التنسيق
-     */
-    public function getFormattedPriceAttribute()
+    public function scopeByPriceRange($query, $min, $max)
     {
-        return number_format($this->price, 0) . ' ريال';
+        return $query->whereBetween('price', [$min, $max]);
+    }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->where('start_date', '>=', $startDate)
+                    ->where('end_date', '<=', $endDate);
+    }
+
+    // للإحصائيات
+    public static function getPopularDestinations($limit = 10)
+    {
+        return static::select('destination')
+            ->selectRaw('COUNT(*) as trips_count')
+            ->selectRaw('AVG(average_rating) as avg_rating')
+            ->selectRaw('SUM(total_ratings) as total_ratings')
+            ->groupBy('destination')
+            ->orderBy('trips_count', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    public static function getMonthlyStats($months = 12)
+    {
+        $stats = [];
+        
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd = $date->copy()->endOfMonth();
+            
+            $stats[] = [
+                'month' => $date->format('Y-m'),
+                'month_name' => $date->format('F Y'),
+                'count' => static::whereBetween('created_at', [$monthStart, $monthEnd])->count(),
+                'active_count' => static::whereBetween('created_at', [$monthStart, $monthEnd])
+                                      ->where('is_active', true)->count()
+            ];
+        }
+        
+        return collect($stats);
     }
 }

@@ -2,131 +2,179 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
-class User extends Authenticatable
+class Rating extends Model
 {
-    use Notifiable;
+    use HasFactory;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'is_admin',
-        'is_active'
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
+        'user_id',
+        'trip_id',
+        'rating',
+        'review'
     ];
 
     protected $casts = [
-        'is_admin' => 'boolean',
-        'is_active' => 'boolean',
-        'email_verified_at' => 'datetime',
+        'rating' => 'integer'
     ];
 
-    /**
-     * علاقة مع الطلبات
-     */
-    public function requests()
+    // العلاقات
+    public function user()
     {
-        return $this->hasMany(Request::class);
+        return $this->belongsTo(User::class);
     }
 
-    /**
-     * علاقة مع التقييمات
-     */
-    public function ratings()
+    public function trip()
     {
-        return $this->hasMany(Rating::class);
+        return $this->belongsTo(Trip::class);
     }
 
-    /**
-     * الحصول على متوسط تقييمات المستخدم
-     */
-    public function getAverageRatingAttribute()
+    // Events
+    protected static function boot()
     {
-        return $this->ratings()->avg('rating') ?: 0;
-    }
-
-    /**
-     * الحصول على عدد التقييمات
-     */
-    public function getTotalRatingsAttribute()
-    {
-        return $this->ratings()->count();
-    }
-
-    /**
-     * الحصول على الطلبات المعلقة
-     */
-    public function getPendingRequestsAttribute()
-    {
-        return $this->requests()->where('status', 'pending')->count();
-    }
-
-    /**
-     * الحصول على الطلبات الموافقة
-     */
-    public function getApprovedRequestsAttribute()
-    {
-        return $this->requests()->where('status', 'approved')->count();
-    }
-
-    /**
-     * التحقق من أن المستخدم قيم رحلة معينة
-     */
-    public function hasRatedTrip($tripId)
-    {
-        return $this->ratings()->where('trip_id', $tripId)->exists();
-    }
-
-    /**
-     * الحصول على تقييم المستخدم لرحلة معينة
-     */
-    public function getRatingForTrip($tripId)
-    {
-        return $this->ratings()->where('trip_id', $tripId)->first();
-    }
-
-    /**
-     * الحصول على أحدث النشاطات
-     */
-    public function getRecentActivityAttribute()
-    {
-        $recentRequests = $this->requests()->latest()->take(3)->get();
-        $recentRatings = $this->ratings()->latest()->take(3)->get();
+        parent::boot();
         
-        return [
-            'requests' => $recentRequests,
-            'ratings' => $recentRatings
+        static::saved(function ($rating) {
+            $rating->trip->updateRatingStats();
+        });
+        
+        static::deleted(function ($rating) {
+            $rating->trip->updateRatingStats();
+        });
+    }
+
+    // Scopes
+    public function scopeHighRating($query, $minRating = 4)
+    {
+        return $query->where('rating', '>=', $minRating);
+    }
+
+    public function scopeLowRating($query, $maxRating = 2)
+    {
+        return $query->where('rating', '<=', $maxRating);
+    }
+
+    public function scopeWithReview($query)
+    {
+        return $query->whereNotNull('review')
+                    ->where('review', '!=', '');
+    }
+
+    public function scopeRecentRatings($query, $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    // خصائص محسوبة
+    public function getRatingInArabicAttribute()
+    {
+        $ratings = [
+            1 => 'ضعيف جداً',
+            2 => 'ضعيف',
+            3 => 'متوسط',
+            4 => 'جيد',
+            5 => 'ممتاز'
         ];
+
+        return $ratings[$this->rating] ?? 'غير محدد';
     }
 
-    /**
-     * نطاق للمستخدمين النشطين
-     */
-    public function scopeActive($query)
+    public function getRatingColorAttribute()
     {
-        return $query->where('is_active', true);
+        if ($this->rating >= 4) return 'green';
+        if ($this->rating == 3) return 'yellow';
+        return 'red';
     }
 
-    /**
-     * نطاق للمديرين
-     */
-    public function scopeAdmins($query)
+    public function getIsPositiveAttribute()
     {
-        return $query->where('is_admin', true);
+        return $this->rating >= 4;
     }
 
-    /**
-     * نطاق للمستخدمين العاديين
-     */
-    public function scopeRegular($query)
+    public function getIsNegativeAttribute()
     {
-        return $query->where('is_admin', false);
+        return $this->rating <= 2;
+    }
+
+    // دوال إحصائية
+    public static function getAverageRating()
+    {
+        return static::avg('rating') ?: 0;
+    }
+
+    public static function getRatingDistribution()
+    {
+        $distribution = [];
+        $total = static::count();
+        
+        for ($i = 1; $i <= 5; $i++) {
+            $count = static::where('rating', $i)->count();
+            $percentage = $total > 0 ? round(($count / $total) * 100, 1) : 0;
+            
+            $distribution[$i] = [
+                'count' => $count,
+                'percentage' => $percentage
+            ];
+        }
+        
+        return $distribution;
+    }
+
+    public static function getMonthlyRatings($months = 12)
+    {
+        $stats = [];
+        
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd = $date->copy()->endOfMonth();
+            
+            $monthlyRatings = static::whereBetween('created_at', [$monthStart, $monthEnd])->get();
+            
+            $stats[] = [
+                'month' => $date->format('Y-m'),
+                'month_name' => $date->format('F Y'),
+                'count' => $monthlyRatings->count(),
+                'average' => $monthlyRatings->avg('rating') ?: 0,
+                'with_review' => $monthlyRatings->where('review', '!=', null)->where('review', '!=', '')->count()
+            ];
+        }
+        
+        return collect($stats);
+    }
+
+    public static function getTopRatedTrips($limit = 10)
+    {
+        return static::select('trip_id')
+            ->selectRaw('AVG(rating) as avg_rating')
+            ->selectRaw('COUNT(*) as rating_count')
+            ->with('trip')
+            ->groupBy('trip_id')
+            ->having('rating_count', '>=', 3)
+            ->orderBy('avg_rating', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    public static function getRecentReviews($limit = 10)
+    {
+        return static::with(['user', 'trip'])
+            ->whereNotNull('review')
+            ->where('review', '!=', '')
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
+    // للتحقق من صحة البيانات
+    public static function rules()
+    {
+        return [
+            'trip_id' => 'required|exists:trips,id',
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'nullable|string|max:1000'
+        ];
     }
 }
